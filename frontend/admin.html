@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin · ShopAgents</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="guarded">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">SA</span> ShopAgents admin</div>
+    <div class="right">
+      <span class="who" id="who"></span>
+      <a class="btn secondary small" href="/index.html">Back to chat</a>
+      <button class="btn secondary small" id="logout" type="button">Log out</button>
+    </div>
+  </header>
+  <div class="page">
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="users" type="button">Users and chat history</button>
+      <button class="tab" data-tab="sources" type="button">Agents and data sources</button>
+      <button class="tab" data-tab="audit" type="button">Audit log</button>
+    </nav>
+
+    <section id="tab-users">
+      <div class="card">
+        <div class="toolbar">
+          <input class="input" id="search" type="search" placeholder="Search by name or email">
+          <button class="btn secondary" id="search-btn" type="button">Search</button>
+        </div>
+        <div id="users-error" class="error hidden"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th>Chats</th><th></th></tr></thead>
+            <tbody id="users"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="grid-2 hidden" id="history-panel">
+        <div class="card">
+          <h3 id="history-title">Conversations</h3>
+          <div id="conv-list"></div>
+        </div>
+        <div class="card">
+          <h3 id="conv-title">Select a conversation</h3>
+          <p class="readonly-note">Read-only view. Opening a history is recorded in the audit log.</p>
+          <div id="conv-messages" class="messages-inner"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-sources" class="hidden">
+      <div class="toolbar">
+        <button class="btn" id="refresh-all" type="button">Refresh all agents now</button>
+        <span class="muted small" id="refresh-note">The daily refresh also runs automatically at the start of each day.</span>
+      </div>
+      <div class="grid-3" id="sources"></div>
+    </section>
+
+    <section id="tab-audit" class="hidden">
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>Admin</th><th>Viewed user</th><th>Conversation</th></tr></thead>
+            <tbody id="audit"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+# Website list for each domain agent (FR-5).
+#
+# Every source names a "parser" that knows the site's page layout or API format:
+#   web_scraping_dev  - HTML product listing on web-scraping.dev (a scraping practice site)
+#   webscraper_io     - HTML product cards on webscraper.io test sites (a scraping practice site)
+#   dummyjson         - JSON product API on dummyjson.com (a free demo data API)
+#   fakestore         - JSON product API on fakestoreapi.com (a free demo data API)
+#
+# Adding another site with one of these layouts only needs a new entry here.
+# A site with a new layout needs a new parser in app/scrapers/parsers/.
+#
+# Note: scrapingcourse.com was considered for clothes, but its robots.txt
+# disallows /ecommerce/*, so it is not used (NFR-11).
+
+food:
+  - name: web-scraping.dev
+    parser: web_scraping_dev
+    base_url: https://web-scraping.dev
+    category: consumables
+    max_pages: 10
+  - name: dummyjson.com
+    parser: dummyjson
+    base_url: https://dummyjson.com
+    categories:
+      - {name: groceries, sub_category: groceries}
+
+clothes:
+  - name: web-scraping.dev
+    parser: web_scraping_dev
+    base_url: https://web-scraping.dev
+    category: apparel
+    max_pages: 10
+  - name: dummyjson.com
+    parser: dummyjson
+    base_url: https://dummyjson.com
+    categories:
+      - {name: mens-shirts, sub_category: shirts, gender: men}
+      - {name: mens-shoes, sub_category: shoes, gender: men}
+      - {name: womens-dresses, sub_category: dresses, gender: women}
+      - {name: womens-shoes, sub_category: shoes, gender: women}
+      - {name: tops, sub_category: tops, gender: women}
+  - name: fakestoreapi.com
+    parser: fakestore
+    base_url: https://fakestoreapi.com
+    categories:
+      - {name: "men's clothing", sub_category: clothing, gender: men}
+      - {name: "women's clothing", sub_category: clothing, gender: women}
+
+electronics:
+  - name: webscraper.io
+    parser: webscraper_io
+    base_url: https://webscraper.io
+    listing_pages:
+      - {path: /test-sites/e-commerce/allinone/computers/laptops, sub_category: laptops}
+      - {path: /test-sites/e-commerce/allinone/computers/tablets, sub_category: tablets}
+      - {path: /test-sites/e-commerce/allinone/phones/touch, sub_category: phones}
+  - name: dummyjson.com
+    parser: dummyjson
+    base_url: https://dummyjson.com
+    categories:
+      - {name: smartphones, sub_category: phones}
+      - {name: laptops, sub_category: laptops}
+      - {name: tablets, sub_category: tablets}
+      - {name: mobile-accessories, sub_category: accessories}
+  - name: fakestoreapi.com
+    parser: fakestore
+    base_url: https://fakestoreapi.com
+    categories:
+      - {name: electronics, sub_category: computer accessories}

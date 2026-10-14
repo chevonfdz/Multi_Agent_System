@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat · ShopAgents</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<!-- The chatbot is only shown after the server confirms the login (UM-9). -->
+<body class="guarded">
+  <header class="topbar">
+    <div class="right">
+      <button class="btn secondary small menu-toggle" id="menu-toggle" type="button" aria-label="Show conversations">&#9776;</button>
+      <div class="brand"><span class="brand-mark">SA</span> ShopAgents</div>
+    </div>
+    <div class="right">
+      <span class="who" id="who"></span>
+      <a class="btn secondary small hidden" id="admin-link" href="/admin.html">Admin dashboard</a>
+      <button class="btn secondary small" id="logout" type="button">Log out</button>
+    </div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <button class="btn" id="new-chat" type="button">+ New chat</button>
+      <h2>Your conversations</h2>
+      <ul class="conv-list" id="conversations"></ul>
+    </aside>
+    <main class="chat">
+      <div class="messages" id="messages">
+        <div class="messages-inner" id="messages-inner"></div>
+      </div>
+      <div class="composer">
+        <form id="composer">
+          <textarea class="input" id="message" rows="1" maxlength="1000"
+                    placeholder="Ask about food, clothes or electronics..." aria-label="Message"></textarea>
+          <button class="btn" id="send" type="submit">Send</button>
+        </form>
+        <div class="hint">Enter to send, Shift+Enter for a new line. Answers come only from the shops' scraped data.</div>
+      </div>
+    </main>
+  </div>
+  <script src="/js/common.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>

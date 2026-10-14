@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account · ShopAgents</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card">
+      <div class="brand"><span class="brand-mark">SA</span> ShopAgents</div>
+      <h1>Create an account</h1>
+      <p class="sub">You need an account to use the shopping assistant.</p>
+      <form id="register-form" novalidate>
+        <label for="name">Name</label>
+        <input class="input" id="name" type="text" autocomplete="name" maxlength="80" required>
+        <label for="email">Email</label>
+        <input class="input" id="email" type="email" autocomplete="email" required>
+        <label for="password">Password</label>
+        <input class="input" id="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+        <label for="confirm">Repeat password</label>
+        <input class="input" id="confirm" type="password" autocomplete="new-password" required>
+        <p class="notice">Privacy notice: your conversations with the assistant are saved to your account
+          so you can return to them, and administrators can view them. Every admin view is logged.</p>
+        <div id="error" class="error hidden" role="alert"></div>
+        <button class="btn" id="submit" type="submit">Create account</button>
+      </form>
+      <p class="switch">Already have an account? <a href="/login.html">Log in</a></p>
+    </section>
+  </main>
+  <script src="/js/common.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

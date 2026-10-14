@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in · ShopAgents</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card">
+      <div class="brand"><span class="brand-mark">SA</span> ShopAgents</div>
+      <h1>Log in</h1>
+      <p class="sub">Ask our food, clothes and electronics agents anything.</p>
+      <form id="login-form" novalidate>
+        <label for="email">Email</label>
+        <input class="input" id="email" type="email" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input class="input" id="password" type="password" autocomplete="current-password" required>
+        <div id="error" class="error hidden" role="alert"></div>
+        <button class="btn" id="submit" type="submit">Log in</button>
+      </form>
+      <p class="switch">New here? <a href="/register.html">Create an account</a></p>
+    </section>
+  </main>
+  <script src="/js/common.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
