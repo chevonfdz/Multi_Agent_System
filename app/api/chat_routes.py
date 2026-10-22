@@ -29,4 +29,7 @@ async def chat(body: ChatRequest, user: User = Depends(get_current_user),
             raise HTTPException(status_code=403, detail="Not your conversation")
     result = await services.central.handle(user.user_id, conversation.conversation_id, body.message)
     return {"conversation_id": conversation.conversation_id, "title": conversation.title,
-            "reply": result.reply, "categories": result.categories, "message_id": result.message_id}
+            "reply": result.reply, "categories": result.categories, "message_id": result.message_id,
+            "intro": result.meta.get("intro"), "sections": result.meta.get("sections"),
+            "budget": result.meta.get("budget"), "footer": result.meta.get("footer"),
+            "trace": result.trace}

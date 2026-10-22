@@ -9,9 +9,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import chat_routes
+from app.api import chat_routes, product_routes
 from app.auth import auth_routes
 from app.history import history_routes
 from app.scheduler.daily_jobs import start_scheduler, startup_refresh
@@ -45,6 +46,10 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app = FastAPI(title="Multi-Agent Shopping Assistant", version="1.0.0", lifespan=lifespan)
     app.state.services = services
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> RedirectResponse:
+        return RedirectResponse("/favicon.svg")
+
     @app.get("/api/health", tags=["system"])
     def health() -> dict:
         return {"status": "ok", "llm": services.llm.provider if services.llm.enabled else "none",
@@ -52,6 +57,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     app.include_router(auth_routes.router)
     app.include_router(chat_routes.router)
+    app.include_router(product_routes.router)
     app.include_router(history_routes.router)
     app.include_router(admin_routes.router)
     # The website itself (login, register, chat and admin pages).

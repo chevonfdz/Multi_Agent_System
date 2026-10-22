@@ -103,6 +103,9 @@ If you skip this step, the app scrapes in the background on its first start anyw
 
 Then open **http://127.0.0.1:8000** in your browser. Press `Ctrl+C` in the terminal to stop.
 
+Options: `python run.py --port 8010` (another port), `--host 0.0.0.0` (let other devices on your
+network open it), `--data-dir PATH` (use a different folder for the databases).
+
 While the server runs, it refreshes every agent's data at 00:00 each day (FR-7).
 
 ### Try it
@@ -118,8 +121,17 @@ While the server runs, it refreshes every agent's data at 00:00 each day (FR-7).
    - `Running shoes and earphones under $150 in total` → combinations that fit the budget
    - `Apple` → asks whether you mean the fruit or the brand
    - `What's the weather today?` → polite out-of-scope reply
-4. Log out and back in: your conversations are still in the sidebar.
-5. Log in as the admin and click **Admin dashboard**:
+4. **Click any product card** to open its details on the right side of the same page: photos,
+   price, rating, description and specifications. Press `Esc` or `×` to close it.
+5. **Click "How it works (live)"** at the top, or **"See how the agents answered this"** under any
+   reply. The live architecture page animates the real request on the system diagram:
+   customer → website/API → login check → central agent (task planner) → the domain agents in
+   parallel → their databases → answer combiner → app.db → customer. The step-by-step list shows
+   the real data and timing of each step: the tasks created, how many products each agent
+   checked and matched, and how long each step took. You can also ask new questions there
+   (choose "Slow" when presenting).
+6. Log out and back in: your conversations are still in the sidebar.
+7. Log in as the admin and click **Admin dashboard**:
    - **Users and chat history:** search users, open any conversation (read-only), and see
      which agents answered each message. Deactivate or reactivate accounts.
    - **Agents and data sources:** product counts and scrape runs per agent, plus a
@@ -147,7 +159,7 @@ the databases (FR-4, FR-13).
 .venv\Scripts\python -m pytest
 ```
 
-There are 72 tests and none of them use the network. They cover routing, follow-ups and
+There are 84 tests and none of them use the network. They cover routing, follow-ups and
 clarifying questions, combined answers, partial failures, scraping and robots.txt, the daily
 refresh, search, the budget solver, login and access control, history, the admin features
 and response times. Test names refer to the test case IDs (TC-xx) in the requirements document.
@@ -186,6 +198,9 @@ The scrapers check every site's robots.txt (wildcards included), identify themse
 clear User-Agent, and wait at least 1 second between requests to the same site (2 seconds
 for web-scraping.dev, as its robots.txt asks). scrapingcourse.com was dropped because its
 robots.txt disallows `/ecommerce/*`. **Only text is stored: no images or image links** (FR-8).
+Product photos on the website are looked up live from the source site when a product is shown
+(one request returns all photo links for the API sources; HTML sites need one product-page
+request) and are kept in memory only.
 
 To add a site with one of the existing layouts, add an entry to `websites.yaml`; it is
 scraped at the next refresh. A site with a new layout needs a parser in
@@ -206,7 +221,7 @@ Multi_Agent_System/
 │   ├── services.py             # builds and wires all components
 │   ├── catalog_keywords.py     # product-type keywords per category
 │   ├── text_utils.py
-│   ├── api/                    # /api/chat, /api/me, request schemas
+│   ├── api/                    # /api/chat, /api/me, product details, system status
 │   ├── auth/                   # bcrypt + JWT, register/login/logout, role checks
 │   ├── users/                  # users, admin routes, audit log
 │   ├── history/                # conversations, messages, agent calls
@@ -218,13 +233,14 @@ Multi_Agent_System/
 │   │   ├── budget_solver.py    # shared budget across categories (CSP, backtracking)
 │   │   └── prompts.py
 │   ├── agents/                 # base agent + food, clothes, electronics agents
-│   ├── scrapers/               # polite fetcher, robots.txt, parsers per site layout
+│   ├── scrapers/               # polite fetcher, robots.txt, parsers, live product photos (media.py)
 │   ├── db/                     # SQLite schema, product repository (search), models
 │   ├── scheduler/              # daily jobs, run_now command
 │   └── llm/client.py           # optional Claude client with automatic fallback
-├── frontend/                   # login, register, chat and admin pages
+├── frontend/                   # login, register, chat (with product panel), admin and
+│                               # architecture.html (live "how it works" page)
 ├── scripts/create_admin.py
-├── tests/                      # 72 automated tests
+├── tests/                      # 84 automated tests
 ├── data/                       # databases (created at run time, not in git)
 ├── logs/                       # app.log
 └── docs/                       # requirements and implementation specification (PDF)
@@ -239,7 +255,9 @@ All endpoints are under `/api`. Interactive documentation is at **http://127.0.0
 | POST | `/api/auth/register`, `/api/auth/login` | Guest |
 | POST | `/api/auth/logout` | Logged in |
 | GET | `/api/me` | Logged in |
-| POST | `/api/chat` `{conversation_id?, message}` | Logged in |
+| POST | `/api/chat` `{conversation_id?, message}`: reply, product sections and the execution trace | Logged in |
+| GET | `/api/products/{category}/{id}`, `/api/products/{category}/{id}/image` | Logged in |
+| GET | `/api/system/status` (agents, product counts, refresh time) | Logged in |
 | GET / DELETE | `/api/conversations`, `/api/conversations/{id}` | Owner |
 | GET | `/api/admin/users?search=`, `/api/admin/users/{id}/conversations`, `/api/admin/conversations/{id}` | Admin (audited) |
 | PATCH | `/api/admin/users/{id}` `{is_active}` | Admin |

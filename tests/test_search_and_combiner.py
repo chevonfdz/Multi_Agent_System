@@ -3,7 +3,7 @@ import asyncio
 
 from app.db.models import AgentReply, Task, TaskPlan
 from app.llm.client import LLMClient, LLMError
-from app.orchestrator.answer_combiner import AnswerCombiner, links_are_valid, template_reply
+from app.orchestrator.answer_combiner import AnswerCombiner, intro_is_valid, template_reply
 from app.orchestrator.budget_solver import solve_budget
 from tests.conftest import SEED, product
 
@@ -59,9 +59,13 @@ def test_template_reply_sections_and_failures():
 
 
 def test_freshness_footer_is_added():                                         # TC-15
-    text = asyncio.run(AnswerCombiner(LLMClient()).combine(
+    combined = asyncio.run(AnswerCombiner(LLMClient()).combine(
         "rice", TaskPlan(), [reply("food", "ok", [SEED["food"][0]], "rice")]))
-    assert text.strip().endswith("_Data last updated: food 14 Oct 2026 00:12 UTC_")
+    assert combined.text.strip().endswith("_Data last updated: food 14 Oct 2026 00:12 UTC_")
+    assert combined.footer == "_Data last updated: food 14 Oct 2026 00:12 UTC_"
+    section = combined.sections[0]
+    assert section["label"] == "Food" and section["products"][0]["name"] == "Rice"
+    assert section["products"][0]["price_text"] == "$5.99"
 
 
 class InventingLLM(LLMClient):
@@ -71,6 +75,15 @@ class InventingLLM(LLMClient):
 
     async def complete(self, system, user, max_tokens=4000):
         return "Try this: [Fake](https://made-up.example/product)"
+
+
+class GoodLLM(LLMClient):
+    @property
+    def enabled(self):
+        return True
+
+    async def complete(self, system, user, max_tokens=4000):
+        return "Rice is available for $5.99."
 
 
 class OfflineLLM(LLMClient):
@@ -85,11 +98,15 @@ class OfflineLLM(LLMClient):
 def test_combiner_rejects_invented_links_and_survives_llm_failure():         # FR-13
     results = [reply("food", "ok", [SEED["food"][0]], "rice")]
     for llm in (InventingLLM(), OfflineLLM()):
-        text = asyncio.run(AnswerCombiner(llm).combine("rice", TaskPlan(), results))
-        assert "made-up.example" not in text and SEED["food"][0].product_url in text
-    assert links_are_valid("see https://a/1", {"https://a/1"})
-    assert not links_are_valid("see https://b/2", {"https://a/1"})
-    assert not links_are_valid("no links at all", {"https://a/1"})
+        combined = asyncio.run(AnswerCombiner(llm).combine("rice", TaskPlan(), results))
+        assert combined.mode == "template"
+        assert "made-up.example" not in combined.text and SEED["food"][0].product_url in combined.text
+    combined = asyncio.run(AnswerCombiner(GoodLLM()).combine("rice", TaskPlan(), results))
+    assert combined.mode == "llm" and combined.intro == "Rice is available for $5.99."
+    assert SEED["food"][0].product_url in combined.text     # product list still comes from the agents
+    assert intro_is_valid("see https://a/1", {"https://a/1"})
+    assert intro_is_valid("no links at all", {"https://a/1"})
+    assert not intro_is_valid("see https://b/2", {"https://a/1"})
 
 
 def test_budget_solver_finds_combinations_within_budget():                   # FR-14

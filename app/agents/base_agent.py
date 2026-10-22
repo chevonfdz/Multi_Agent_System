@@ -41,16 +41,16 @@ class BaseAgent:
     # ------------------------------------------------------------------ answering
     async def answer(self, task: Task, limit: int | None = None) -> AgentReply:
         started = time.perf_counter()
-        products = await asyncio.to_thread(
-            self.repo.search, task.query, task.filters, limit or self.results_per_task, self.SYNONYMS,
-            self.product_types())
+        products, stats = await asyncio.to_thread(
+            self.repo.search_with_stats, task.query, task.filters, limit or self.results_per_task,
+            self.SYNONYMS, self.product_types())
         last_updated = await asyncio.to_thread(self.repo.last_updated)
         latency = int((time.perf_counter() - started) * 1000)
         if not products:
             return AgentReply(self.name, "empty", [], "No matching products found.", last_updated,
-                              query=task.query, filters=task.filters, latency_ms=latency)
+                              query=task.query, filters=task.filters, latency_ms=latency, **stats)
         return AgentReply(self.name, "ok", products, self.summarize(products), last_updated,
-                          query=task.query, filters=task.filters, latency_ms=latency)
+                          query=task.query, filters=task.filters, latency_ms=latency, **stats)
 
     def product_types(self) -> set[str]:
         """Search terms that name a kind of product in this agent's category ("jacket", "power bank")."""

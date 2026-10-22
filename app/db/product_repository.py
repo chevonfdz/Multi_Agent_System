@@ -172,6 +172,11 @@ class ProductRepository:
                product_types: set[str] | None = None) -> list[Product]:
         """Keyword search with price filters. Products matching more query terms rank first.
         If the query names a product type (e.g. "jacket" in "rain jacket"), results must match it."""
+        return self.search_with_stats(query, filters, limit, synonyms, product_types)[0]
+
+    def search_with_stats(self, query: str, filters: dict[str, Any] | None = None, limit: int = 5,
+                          synonyms: dict[str, list[str]] | None = None,
+                          product_types: set[str] | None = None) -> tuple[list[Product], dict[str, int]]:
         filters = filters or {}
         sql = "SELECT * FROM products WHERE availability != 'unavailable'"
         args: list[Any] = []
@@ -216,7 +221,8 @@ class ProductRepository:
             return (-matched, -score, *tail, p.name)
 
         scored.sort(key=sort_key)
-        return [p for _, _, p in scored[:limit]]
+        stats = {"scanned": self.count(), "matched": len(scored)}
+        return [p for _, _, p in scored[:limit]], stats
 
 
 def build_term_groups(query: str, synonyms: dict[str, list[str]]) -> list[list[str]]:

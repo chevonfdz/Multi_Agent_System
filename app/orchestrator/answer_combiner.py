@@ -1,9 +1,16 @@
-"""Merges the domain agents' results into one reply (FR-11, FR-12, FR-13, FR-9)."""
+"""Merges the domain agents' results into one reply (FR-11, FR-12, FR-13, FR-9).
+
+The reply has a short introduction, one section per category and a data-freshness line.
+The product lists are always built from the agents' results, so they can only contain real
+products. With an LLM configured, only the introduction is written by the model.
+"""
 from __future__ import annotations
 
 import json
 import logging
 import re
+from dataclasses import dataclass, field
+from typing import Any
 
 from app.db.models import AgentReply, Product, TaskPlan
 from app.llm.client import LLMClient, LLMError
@@ -14,6 +21,16 @@ log = logging.getLogger(__name__)
 
 LABELS = {"food": "Food", "clothes": "Clothes", "electronics": "Electronics"}
 URL_PATTERN = re.compile(r"https?://[^\s)\]>\"']+")
+
+
+@dataclass
+class CombinedReply:
+    text: str                                    # full reply in Markdown (stored and shown as text)
+    intro: str
+    sections: list[dict[str, Any]] = field(default_factory=list)   # structured, for product cards
+    budget: dict[str, Any] | None = None
+    footer: str = ""
+    mode: str = "template"                       # "template" or "llm" (who wrote the intro)
 
 
 def describe_filters(filters: dict, currency: str = "USD") -> str:
@@ -30,6 +47,10 @@ def describe_filters(filters: dict, currency: str = "USD") -> str:
     return (" " + " ".join(parts)) if parts else ""
 
 
+def limits_text(r: AgentReply) -> str:
+    return describe_filters({k: v for k, v in r.filters.items() if k in ("max_price", "min_price", "size")}).strip()
+
+
 def product_line(index: int, p: Product) -> str:
     rating = f" · rated {p.rating:.1f}/5" if p.rating else ""
     return (f"{index}. **{p.name}** — {format_price(p.price, p.currency)} · {p.source_site}{rating} · "
@@ -37,8 +58,8 @@ def product_line(index: int, p: Product) -> str:
 
 
 def section_title(r: AgentReply) -> str:
-    limits = describe_filters({k: v for k, v in r.filters.items() if k in ("max_price", "min_price", "size")})
-    suffix = f" ·{limits}" if limits else ""
+    limits = limits_text(r)
+    suffix = f" · {limits}" if limits else ""
     return f"### {LABELS.get(r.agent, r.agent.title())} · {r.query or 'all products'}{suffix}"
 
 
@@ -55,30 +76,35 @@ def empty_message(r: AgentReply, modifier: str | None) -> str:
             "Try a broader search or a different price limit.")
 
 
-def template_reply(plan: TaskPlan, results: list[AgentReply],
-                   combos: list[tuple[list[Product], float]] | None = None,
-                   display_limit: int = 5) -> str:
+def section_note(r: AgentReply, modifier: str | None) -> str:
+    if r.status == "empty":
+        return empty_message(r, modifier)
+    if r.status == "failed":
+        return f"Sorry, I couldn't check {LABELS.get(r.agent, r.agent).lower()} right now. Please try again in a moment."
+    return ""
+
+
+def template_intro(plan: TaskPlan, results: list[AgentReply]) -> str:
     if results and all(r.status == "failed" for r in results):
-        return ("Sorry, I couldn't check the shops right now. Please try again in a few minutes.")
-    ok = [r for r in results if r.status == "ok"]
+        return "Sorry, I couldn't check the shops right now. Please try again in a few minutes."
     if len(results) > 1:
-        intro = f"Here's what I found for your {len(results)} requests:"
-    elif ok:
-        intro = "Here's what I found:"
-    elif plan.modifier:
-        intro = "That's everything I have for that search."
-    else:
-        intro = "I couldn't find a match for that."
-    lines = [intro, ""]
+        return f"Here's what I found for your {len(results)} requests:"
+    if any(r.status == "ok" for r in results):
+        return "Here's what I found:"
+    if plan.modifier:
+        return "That's everything I have for that search."
+    return "I couldn't find a match for that."
+
+
+def sections_markdown(plan: TaskPlan, results: list[AgentReply],
+                      combos: list[tuple[list[Product], float]] | None, display_limit: int) -> str:
+    lines: list[str] = []
     for r in results:
         lines.append(section_title(r))
-        label = LABELS.get(r.agent, r.agent).lower()
         if r.status == "ok":
             lines += [product_line(i, p) for i, p in enumerate(r.products[:display_limit], 1)]
-        elif r.status == "empty":
-            lines.append(empty_message(r, plan.modifier))
         else:
-            lines.append(f"Sorry, I couldn't check {label} right now. Please try again in a moment.")
+            lines.append(section_note(r, plan.modifier))
         lines.append("")
     if plan.total_budget:
         budget = format_price(plan.total_budget, "USD")
@@ -93,29 +119,67 @@ def template_reply(plan: TaskPlan, results: list[AgentReply],
     return "\n".join(lines).strip()
 
 
+def template_reply(plan: TaskPlan, results: list[AgentReply],
+                   combos: list[tuple[list[Product], float]] | None = None,
+                   display_limit: int = 5) -> str:
+    intro = template_intro(plan, results)
+    if results and all(r.status == "failed" for r in results):
+        return intro
+    body = sections_markdown(plan, results, combos, display_limit)
+    return f"{intro}\n\n{body}".strip()
+
+
+def product_card(p: Product) -> dict[str, Any]:
+    return {"product_id": p.product_id, "category": p.category, "name": p.name, "price": p.price,
+            "price_text": format_price(p.price, p.currency), "rating": p.rating,
+            "source_site": p.source_site, "sub_category": p.sub_category, "availability": p.availability}
+
+
+def build_sections(plan: TaskPlan, results: list[AgentReply], display_limit: int) -> list[dict[str, Any]]:
+    return [{
+        "agent": r.agent,
+        "label": LABELS.get(r.agent, r.agent.title()),
+        "query": r.query or "all products",
+        "limits": limits_text(r),
+        "status": r.status,
+        "note": section_note(r, plan.modifier),
+        "products": [product_card(p) for p in r.products[:display_limit]] if r.status == "ok" else [],
+    } for r in results]
+
+
+def build_budget(plan: TaskPlan, results: list[AgentReply],
+                 combos: list[tuple[list[Product], float]] | None) -> dict[str, Any] | None:
+    if not plan.total_budget:
+        return None
+    return {
+        "budget_text": format_price(plan.total_budget, "USD"),
+        "combinations": [{"items": [product_card(p) for p in products],
+                          "total_text": format_price(total, "USD")} for products, total in (combos or [])],
+        "possible": bool(combos) or not all(r.status == "ok" for r in results),
+    }
+
+
 def freshness_footer(results: list[AgentReply]) -> str:
     parts = [f"{r.agent} {format_timestamp(r.last_updated)}" for r in results if r.status != "failed"]
     return f"_Data last updated: {', '.join(parts)}_" if parts else ""
 
 
-def links_are_valid(text: str, allowed: set[str]) -> bool:
+def intro_is_valid(text: str, allowed: set[str]) -> bool:
+    """An LLM-written introduction may not contain links the agents did not return (FR-13)."""
     links = set(URL_PATTERN.findall(text))
-    if allowed and not links:
-        return False
-    return links.issubset(allowed)
+    return bool(text.strip()) and len(text) <= 800 and links.issubset(allowed)
 
 
 def format_results_for_llm(message: str, results: list[AgentReply],
                            combos: list[tuple[list[Product], float]] | None,
                            total_budget: float | None) -> str:
-    payload = {
+    payload: dict[str, Any] = {
         "customer_message": message,
         "categories": [{
             "category": r.agent, "query": r.query, "status": r.status,
             "filters": {k: v for k, v in r.filters.items() if k != "exclude_ids"},
             "products": [{"name": p.name, "price": format_price(p.price, p.currency),
-                          "site": p.source_site, "rating": p.rating, "link": p.product_url,
-                          "description": p.description[:200]} for p in r.products[:5]],
+                          "site": p.source_site, "rating": p.rating} for p in r.products[:5]],
         } for r in results],
     }
     if total_budget:
@@ -131,19 +195,24 @@ class AnswerCombiner:
         self.display_limit = display_limit
 
     async def combine(self, message: str, plan: TaskPlan, results: list[AgentReply],
-                      combos: list[tuple[list[Product], float]] | None = None) -> str:
-        text: str | None = None
+                      combos: list[tuple[list[Product], float]] | None = None) -> CombinedReply:
+        intro = template_intro(plan, results)
+        mode = "template"
         allowed = {p.product_url for r in results for p in r.products}
         if self.llm.enabled and any(r.status == "ok" for r in results):
             try:
-                candidate = await self.llm.complete(
-                    COMBINER_PROMPT, format_results_for_llm(message, results, combos, plan.total_budget))
-                if not links_are_valid(candidate, allowed):
-                    raise LLMError("reply contains a link that no agent returned")
-                text = candidate
+                candidate = (await self.llm.complete(
+                    COMBINER_PROMPT, format_results_for_llm(message, results, combos, plan.total_budget))).strip()
+                if not intro_is_valid(candidate, allowed):
+                    raise LLMError("introduction contains a link that no agent returned")
+                intro, mode = candidate, "llm"
             except LLMError as exc:
-                log.warning("LLM combine failed, using the template reply: %s", exc)
-        if text is None:
-            text = template_reply(plan, results, combos, self.display_limit)
+                log.warning("LLM introduction failed, using the template: %s", exc)
+
+        all_failed = bool(results) and all(r.status == "failed" for r in results)
+        body = "" if all_failed else sections_markdown(plan, results, combos, self.display_limit)
         footer = freshness_footer(results)
-        return f"{text}\n\n{footer}" if footer else text
+        text = "\n\n".join(part for part in (intro, body, footer) if part)
+        return CombinedReply(text=text, intro=intro,
+                             sections=build_sections(plan, results, self.display_limit),
+                             budget=build_budget(plan, results, combos), footer=footer, mode=mode)

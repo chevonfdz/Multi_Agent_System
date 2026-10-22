@@ -39,6 +39,11 @@ class Message:
     def public(self, include_calls: bool = False) -> dict:
         data = {"message_id": self.message_id, "sender": self.sender, "content": self.content,
                 "categories": self.categories, "created_at": self.created_at}
+        if self.sender == "assistant":
+            # Structured parts used by the website for product cards and the live architecture view.
+            for key in ("intro", "sections", "budget", "footer", "trace"):
+                if key in self.meta:
+                    data[key] = self.meta[key]
         if include_calls:
             data["agent_calls"] = self.agent_calls
         return data

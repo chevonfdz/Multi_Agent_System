@@ -17,7 +17,8 @@ from app.auth.security import hash_password  # noqa: E402
 from app.db.models import Product  # noqa: E402
 from app.llm.client import LLMClient  # noqa: E402
 from app.main import create_app  # noqa: E402
-from app.services import build_agents, build_services  # noqa: E402
+from app.scrapers.media import MediaService  # noqa: E402
+from app.services import build_agents, build_services, load_websites  # noqa: E402
 from config.settings import Settings  # noqa: E402
 
 PASSWORD = "secret-pass-1"
@@ -96,8 +97,13 @@ def agents(settings):
 
 
 @pytest.fixture
-def services(settings, agents):
-    return build_services(settings, agents=agents, llm=LLMClient())
+def media(settings):
+    return MediaService(no_network, load_websites(settings))
+
+
+@pytest.fixture
+def services(settings, agents, media):
+    return build_services(settings, agents=agents, llm=LLMClient(), media=media)
 
 
 @pytest.fixture

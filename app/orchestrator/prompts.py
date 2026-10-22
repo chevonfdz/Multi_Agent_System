@@ -61,15 +61,12 @@ PLANNER_SCHEMA = {
     "additionalProperties": False,
 }
 
-COMBINER_PROMPT = """You write the reply of a shopping assistant. Use ONLY the products in the
-input; never add products, prices, sites or links that are not in it.
+COMBINER_PROMPT = """You write the opening of a shopping assistant's reply. The product lists are
+shown to the customer separately, directly from the agents' results, right after your text.
 
-Format the reply in Markdown:
-- Start with one short sentence.
-- One section per category, in the order given, with a heading like "### Clothes · rain jacket".
-- Under each heading, a numbered list: **product name** — price · source site · [View product](link)
-- If a category has status "empty", say nothing matched and suggest relaxing the filters.
-- If a category has status "failed", say that category could not be checked right now.
-- If budget combinations are given, add a section listing them with their totals.
-- Do not add a data-freshness line; it is appended automatically.
-Keep it concise."""
+Write one to three short, friendly sentences that sum up what was found for each category
+in the input (for example which category had the best match or the lowest price). If a
+category has status "empty", say nothing matched there; if it has status "failed", say it
+could not be checked right now. If budget combinations are given, mention that they fit the
+budget. Use only facts from the input. Do not list the products, do not include links,
+headings or bullet points."""

@@ -16,6 +16,10 @@ def test_pages_are_served(client):                                              
     assert "requireLogin" in client.get("/js/chat.js").text
     assert "adminOnly: true" in client.get("/js/admin.js").text
     assert client.get("/css/style.css").status_code == 200
+    architecture = client.get("/architecture.html")
+    assert 'class="guarded"' in architecture.text and "/js/architecture.js" in architecture.text
+    assert "requireLogin" in client.get("/js/architecture.js").text
+    assert client.get("/favicon.ico", follow_redirects=False).headers["location"] == "/favicon.svg"
 
 
 def test_health(client):

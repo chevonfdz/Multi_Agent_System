@@ -77,3 +77,5 @@ class AgentReply:
     filters: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
     latency_ms: int = 0
+    scanned: int = 0        # products in the agent's database that were checked
+    matched: int = 0        # products that matched the query and filters

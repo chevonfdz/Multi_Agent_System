@@ -22,6 +22,7 @@ from app.scrapers.clothes_scraper import ClothesScraper
 from app.scrapers.electronics_scraper import ElectronicsScraper
 from app.scrapers.fetcher import PoliteFetcher
 from app.scrapers.food_scraper import FoodScraper
+from app.scrapers.media import MediaService
 from app.users.audit_repository import AuditRepository
 from app.users.user_repository import UserRepository
 from config.settings import Settings
@@ -42,6 +43,7 @@ class Services:
     agents: dict[str, BaseAgent]
     llm: LLMClient
     central: CentralAgent
+    media: MediaService
 
 
 def load_websites(settings: Settings) -> dict[str, list[dict]]:
@@ -64,18 +66,21 @@ def build_agents(settings: Settings, fetch=None) -> dict[str, BaseAgent]:
 
 
 def build_services(settings: Settings, agents: dict[str, BaseAgent] | None = None,
-                   llm: LLMClient | None = None) -> Services:
+                   llm: LLMClient | None = None, media: MediaService | None = None) -> Services:
     init_app_db(settings.app_db_path)
     users = UserRepository(settings.app_db_path)
     audit = AuditRepository(settings.app_db_path)
     history = HistoryRepository(settings.app_db_path)
-    agents = agents if agents is not None else build_agents(settings)
+    # One polite fetcher shared by the scrapers and the photo service, so rate limits apply to both.
+    fetch = PoliteFetcher(settings.user_agent, settings.request_delay_seconds).get_text
+    agents = agents if agents is not None else build_agents(settings, fetch)
+    media = media if media is not None else MediaService(fetch, load_websites(settings))
     llm = llm if llm is not None else build_llm(settings.llm_provider, settings.llm_model,
                                                  settings.llm_timeout_seconds)
     central = CentralAgent(agents, TaskPlanner(llm), AnswerCombiner(llm, settings.results_per_category), history,
                            agent_timeout=settings.agent_timeout_seconds,
                            context_messages=settings.history_context_messages)
-    return Services(settings, users, audit, history, agents, llm, central)
+    return Services(settings, users, audit, history, agents, llm, central, media)
 
 
 def setup_logging(settings: Settings) -> None:

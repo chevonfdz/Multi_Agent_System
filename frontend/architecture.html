@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How it works · ShopAgents</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="guarded">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">SA</span> ShopAgents · how it works</div>
+    <div class="right">
+      <span class="who" id="who"></span>
+      <a class="btn secondary small" id="back-link" href="/index.html">Back to chat</a>
+      <button class="btn secondary small" id="logout" type="button">Log out</button>
+    </div>
+  </header>
+
+  <main class="arch-page">
+    <div class="arch-head">
+      <h1>Live multi-agent architecture</h1>
+      <p>Ask a question and watch it travel through the real system: the central router agent plans one
+        task per category, the domain agents search their own databases in parallel, and the answer
+        combiner builds one reply. Every number on this page (tasks, products checked, timings) comes
+        from the real request.</p>
+    </div>
+
+    <form class="arch-controls" id="ask-form">
+      <input class="input" id="question" maxlength="1000" placeholder="Ask about food, clothes or electronics..." aria-label="Question">
+      <button class="btn" id="ask-btn" type="submit">Ask and watch</button>
+      <button class="btn secondary" id="replay-btn" type="button" disabled>Replay</button>
+      <select id="speed" aria-label="Animation speed">
+        <option value="1">Normal speed</option>
+        <option value="1.8">Slow (for presenting)</option>
+        <option value="0.5">Fast</option>
+      </select>
+    </form>
+    <div class="chips" id="examples" style="justify-content:flex-start;margin-top:4px"></div>
+    <p class="muted small" id="conv-note">Questions asked here are saved as a normal conversation in your chat history,
+      so follow-ups such as "Show me cheaper ones" work too.</p>
+
+    <div class="arch-grid">
+      <section class="card diagram-card">
+        <svg id="arch-svg" viewBox="0 0 960 650" role="img" aria-labelledby="arch-title arch-desc">
+          <title id="arch-title">ShopAgents architecture</title>
+          <desc id="arch-desc">The customer's question goes through the website and API to the central router agent.
+            Its task planner sends one task to each needed domain agent; each agent searches its own database;
+            the answer combiner merges the results, saves them in app.db and returns one reply.</desc>
+
+          <!-- central agent container -->
+          <rect class="container-box" x="250" y="196" width="460" height="134" rx="14"/>
+          <text class="container-label" x="266" y="216">Central router agent</text>
+
+          <!-- edges (paths the messages travel along) -->
+          <path class="edge" id="e_req" d="M440 72 V108"/>
+          <path class="edge" id="e_resp" d="M520 108 V72"/>
+          <path class="edge" id="e_auth" d="M330 136 H260"/>
+          <path class="edge" id="e_hist_load" d="M850 240 V186 H430 V230"/>
+          <path class="edge" id="e_api_planner" d="M400 164 V230"/>
+          <path class="edge" id="e_plan_food" d="M370 310 V352 H170 V400"/>
+          <path class="edge" id="e_plan_clothes" d="M370 310 V352 H450 V400"/>
+          <path class="edge" id="e_plan_electronics" d="M370 310 V352 H760 V400"/>
+          <path class="edge" id="e_food_db" d="M170 464 V506"/>
+          <path class="edge" id="e_clothes_db" d="M480 464 V506"/>
+          <path class="edge" id="e_electronics_db" d="M790 464 V506"/>
+          <path class="edge" id="e_food_comb" d="M210 400 V374 H570 V310"/>
+          <path class="edge" id="e_clothes_comb" d="M520 400 V374 H590 V310"/>
+          <path class="edge" id="e_electronics_comb" d="M830 400 V374 H610 V310"/>
+          <path class="edge" id="e_comb_hist" d="M690 280 H760"/>
+          <path class="edge" id="e_comb_api" d="M600 230 V164"/>
+          <path class="edge" id="e_planner_api" d="M345 230 V164"/>
+          <path class="edge" d="M170 592 V556"/>
+          <path class="edge" d="M480 592 V556"/>
+          <path class="edge" d="M790 592 V556"/>
+
+          <!-- nodes -->
+          <g class="node" id="n_customer"><rect x="380" y="16" width="200" height="56" rx="10"/>
+            <text class="title" x="480" y="40" text-anchor="middle">Customer</text>
+            <text class="sub" id="s_customer" x="480" y="59" text-anchor="middle">Browser · chat page</text></g>
+          <g class="node" id="n_api"><rect x="330" y="108" width="300" height="56" rx="10"/>
+            <text class="title" x="480" y="132" text-anchor="middle">Website + API</text>
+            <text class="sub" id="s_api" x="480" y="151" text-anchor="middle">FastAPI · POST /api/chat</text></g>
+          <g class="node" id="n_auth"><rect x="40" y="108" width="220" height="56" rx="10"/>
+            <text class="title" x="150" y="132" text-anchor="middle">User management</text>
+            <text class="sub" id="s_auth" x="150" y="151" text-anchor="middle">Login token check (JWT)</text></g>
+          <g class="node" id="n_planner"><rect x="270" y="230" width="200" height="80" rx="10"/>
+            <text class="title" x="370" y="258" text-anchor="middle">Task planner</text>
+            <text class="sub" id="s_planner" x="370" y="278" text-anchor="middle">Which agents? Which filters?</text>
+            <text class="sub" id="s_planner2" x="370" y="296" text-anchor="middle"></text></g>
+          <g class="node" id="n_combiner"><rect x="490" y="230" width="200" height="80" rx="10"/>
+            <text class="title" x="590" y="258" text-anchor="middle">Answer combiner</text>
+            <text class="sub" id="s_combiner" x="590" y="278" text-anchor="middle">One reply, a section per agent</text>
+            <text class="sub" id="s_combiner2" x="590" y="296" text-anchor="middle"></text></g>
+          <g class="node" id="n_history"><rect x="760" y="240" width="180" height="64" rx="10"/>
+            <text class="title" x="850" y="266" text-anchor="middle">app.db</text>
+            <text class="sub" id="s_history" x="850" y="286" text-anchor="middle">Users · chat history</text></g>
+          <g class="node" id="n_food"><rect x="60" y="400" width="220" height="64" rx="10"/>
+            <text class="title" x="170" y="426" text-anchor="middle">Food agent</text>
+            <text class="sub" id="s_food" x="170" y="446" text-anchor="middle">Own websites · own database</text></g>
+          <g class="node" id="n_clothes"><rect x="370" y="400" width="220" height="64" rx="10"/>
+            <text class="title" x="480" y="426" text-anchor="middle">Clothes agent</text>
+            <text class="sub" id="s_clothes" x="480" y="446" text-anchor="middle">Own websites · own database</text></g>
+          <g class="node" id="n_electronics"><rect x="680" y="400" width="220" height="64" rx="10"/>
+            <text class="title" x="790" y="426" text-anchor="middle">Electronics agent</text>
+            <text class="sub" id="s_electronics" x="790" y="446" text-anchor="middle">Own websites · own database</text></g>
+          <g class="node" id="n_food_db"><rect x="95" y="506" width="150" height="50" rx="10"/>
+            <text class="title" x="170" y="527" text-anchor="middle">food.db</text>
+            <text class="sub" id="s_food_db" x="170" y="545" text-anchor="middle">products</text></g>
+          <g class="node" id="n_clothes_db"><rect x="405" y="506" width="150" height="50" rx="10"/>
+            <text class="title" x="480" y="527" text-anchor="middle">clothes.db</text>
+            <text class="sub" id="s_clothes_db" x="480" y="545" text-anchor="middle">products</text></g>
+          <g class="node" id="n_electronics_db"><rect x="715" y="506" width="150" height="50" rx="10"/>
+            <text class="title" x="790" y="527" text-anchor="middle">electronics.db</text>
+            <text class="sub" id="s_electronics_db" x="790" y="545" text-anchor="middle">products</text></g>
+
+          <rect class="refresh-box" x="60" y="592" width="840" height="44" rx="10"/>
+          <text class="refresh-text" id="refresh-text" x="480" y="618" text-anchor="middle">Daily refresh at 00:00: each agent scrapes its own websites (robots.txt checked) and updates its database. No images are stored.</text>
+          <g id="packets"></g>
+        </svg>
+        <div class="legend">
+          <span><i style="background:#0f6e56"></i>request / task</span>
+          <span><i style="background:#ef9f27"></i>results / reply</span>
+          <span><i style="background:#d3d1c7"></i>not used in this request</span>
+          <span id="planner-mode"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>What happened, step by step</h3>
+        <ol class="timeline" id="timeline">
+          <li class="empty">Ask a question above to see each step with its real data and timing.</li>
+        </ol>
+      </section>
+    </div>
+
+    <section class="arch-answer hidden" id="answer-box">
+      <h3>The answer the customer sees</h3>
+      <div class="bubble" id="answer"></div>
+    </section>
+
+    <div class="explain-grid">
+      <div class="card"><h3>1. Customer and website</h3><p>Only logged-in users can chat. Every question and
+        reply is saved in app.db, so customers can return to old conversations and admins can review them.</p></div>
+      <div class="card"><h3>2. Central router agent</h3><p>The task planner works out which categories a question
+        is about and creates one task per category, with filters such as price limits. Unclear questions get a
+        clarifying question instead. The answer combiner merges the agents' results into one reply.</p></div>
+      <div class="card"><h3>3. Domain agents</h3><p>The food, clothes and electronics agents are specialists. Each
+        searches only its own database, they run at the same time, and each has a 10-second time limit, so one
+        slow or failing agent never blocks the others.</p></div>
+      <div class="card"><h3>4. Databases</h3><p>Each agent owns one SQLite database of text-only product data.
+        app.db holds users, conversations, messages and a log of every agent call.</p></div>
+      <div class="card"><h3>5. Daily refresh</h3><p>Every day at 00:00 a scheduler tells each agent to scrape its
+        own website list. The scrapers respect robots.txt and rate limits; if a site fails, its old data is kept.</p></div>
+      <div class="card"><h3>6. Grounded answers</h3><p>Products, prices and links come only from the databases,
+        never invented. Product photos are loaded live from the shop when shown, and never stored.</p></div>
+    </div>
+  </main>
+  <script src="/js/common.js"></script>
+  <script src="/js/architecture.js"></script>
+</body>
+</html>
