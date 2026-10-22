@@ -276,7 +276,11 @@
       const reply = replies.find((m) => m.message_id === messageId) || replies[replies.length - 1];
       state.conversationId = conversation;
       updateBackLink();
-      if (!reply) return;
+      if (!reply) {
+        addStep("No trace for this conversation yet",
+          "Its answers were created before tracing was added. Ask a question above to see a live trace.", { kind: "info" });
+        return;
+      }
       state.lastTrace = reply.trace;
       state.lastReply = reply;
       setButtons();

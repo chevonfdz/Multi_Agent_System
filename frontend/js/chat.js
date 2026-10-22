@@ -27,7 +27,7 @@
   function scrollToBottom() { el.scroller.scrollTop = el.scroller.scrollHeight; }
 
   function traceLinkFor(msg) {
-    if (!msg.message_id || !state.conversationId) return null;
+    if (!msg.message_id || !msg.trace || !state.conversationId) return null;   // older answers have no trace
     return `/architecture.html?conversation=${state.conversationId}&message=${msg.message_id}`;
   }
 
